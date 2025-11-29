@@ -7,29 +7,20 @@
       "config": {
         "distDir": "build"
       }
-    },
-    {
-      "src": "itam-saas/Agent/server.js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "itam-saas/Agent/server.js"
+      "destination": "https://your-backend-url.herokuapp.com/api/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "itam-saas/Client/build/$1",
-      "methods": ["GET", "HEAD"]
+      "dest": "itam-saas/Client/build/$1"
     },
     {
       "src": "/(.*)",
       "dest": "itam-saas/Client/build/index.html"
     }
-  ],
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "REACT_APP_API_URL": "@react_app_api_url"
-  }
+  ]
 }

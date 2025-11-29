@@ -1,100 +1,174 @@
 # Vercel Deployment Guide for IT Asset Tracker
 
-## Prerequisites
-- Vercel account (vercel.com)
-- GitHub account with IT-ASSET-PROJECT repo
-- Supabase PostgreSQL database URL
+## Overview
 
-## Deployment Steps
+The IT Asset Tracker can be deployed on Vercel in two ways:
 
-### 1. Connect to Vercel
+### Option A: Frontend Only on Vercel + Backend on Heroku/Railway (Recommended)
+### Option B: Full Stack on Vercel
 
-Visit https://vercel.com and:
-1. Click "New Project"
-2. Import your GitHub repository: `shoam321/IT-ASSET-PROJECT`
-3. Select project scope and click "Import"
+## Option A: Frontend on Vercel + Backend Separate (Recommended)
 
-### 2. Configure Environment Variables
+### Step 1: Deploy Frontend on Vercel
 
-In Vercel Project Settings → Environment Variables, add:
+1. Go to https://vercel.com/dashboard
+2. Click "New Project"
+3. Import `shoam321/IT-ASSET-PROJECT` GitHub repo
+4. Configure:
+   - **Root Directory**: `itam-saas/Client`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `build`
+   - **Install Command**: `npm install`
 
+5. Add Environment Variables:
+   ```
+   REACT_APP_API_URL=https://your-backend-url.com/api
+   REACT_APP_URL=https://your-vercel-url.vercel.app
+   ```
+
+6. Click Deploy
+
+### Step 2: Deploy Backend (Choose One)
+
+#### Deploy on Heroku:
+```bash
+cd itam-saas/Agent
+heroku create your-app-name
+heroku config:set DATABASE_URL=postgresql://...
+git push heroku main
 ```
-DATABASE_URL=postgresql://postgres:PASSWORD@host:5432/postgres
+
+#### Deploy on Railway:
+1. Go to https://railway.app
+2. Connect GitHub repo
+3. Select `itam-saas/Agent` as root directory
+4. Add DATABASE_URL environment variable
+5. Deploy
+
+#### Deploy on Render:
+1. Go to https://render.com
+2. Create new Web Service
+3. Connect GitHub repo
+4. Set:
+   - Build Command: `npm install`
+   - Start Command: `npm start`
+   - Add environment variables
+5. Deploy
+
+### Step 3: Update Frontend API URL
+
+Once backend is deployed, update Vercel environment:
+1. Go to Vercel Project Settings
+2. Add `REACT_APP_API_URL=https://your-backend-url.com/api`
+3. Redeploy
+
+---
+
+## Option B: Full Stack on Vercel (Experimental)
+
+### Step 1: Vercel Project Setup
+
+1. Go to https://vercel.com/dashboard
+2. Click "New Project"
+3. Import `shoam321/IT-ASSET-PROJECT`
+4. Configure:
+   - **Root Directory**: (leave empty)
+   - **Build Command**: `cd itam-saas/Client && npm install && npm run build`
+   - **Output Directory**: `itam-saas/Client/build`
+
+### Step 2: Environment Variables
+
+Add these in Vercel Project Settings:
+```
+DATABASE_URL=postgresql://user:password@host:5432/db
 REACT_APP_API_URL=https://your-vercel-url.vercel.app/api
 REACT_APP_URL=https://your-vercel-url.vercel.app
+NODE_ENV=production
 ```
 
-Replace:
-- `PASSWORD` with your Supabase password
-- `your-vercel-url` with your Vercel deployment URL (shown after first deploy)
+### Step 3: Deploy
 
-### 3. Configure Build Settings
+Click "Deploy" and monitor build logs.
 
-**Root Directory**: (leave empty or set to `.`)
-
-**Build Command**:
-```bash
-cd itam-saas/Client && npm install && npm run build
-```
-
-**Output Directory**: `itam-saas/Client/build`
-
-**Install Command**:
-```bash
-npm install
-```
-
-### 4. Deploy
-
-1. Click "Deploy"
-2. Wait for build to complete
-3. Once deployed, Vercel will provide your live URL
-
-### 5. Update Frontend API URL
-
-After first deployment, update `.env` in `itam-saas/Client/`:
-
-```
-REACT_APP_API_URL=https://your-vercel-url.vercel.app/api
-```
-
-Then push to GitHub to trigger a redeploy.
+---
 
 ## Troubleshooting
 
 ### Build Fails
-- Ensure all dependencies are in package.json
-- Check Node version compatibility (recommend 18+)
-- View build logs in Vercel dashboard
+- Check build logs in Vercel dashboard
+- Ensure `package.json` has all dependencies
+- Verify Node version (18+ recommended)
+- Check for missing environment variables
 
-### Database Connection Errors
+### 404 Errors
+- Verify API_URL is correct
+- Check CORS settings in backend
+- Ensure backend is running and accessible
+- Check network tab in browser DevTools
+
+### Database Connection Error
 - Verify DATABASE_URL is correct
-- Check Supabase IP whitelist allows Vercel IPs
-- Ensure tables exist in database
+- Check Supabase IP whitelist
+- Ensure database tables exist
+- Test connection locally first
 
-### API Not Working
-- Check that `/api/` routes are properly configured
-- Verify CORS settings allow your Vercel domain
-- Check Vercel function logs
+### CORS Issues
+- Update backend CORS origin to match frontend URL
+- Add frontend domain to allowed origins
 
-## Next Steps
+---
 
-1. **Add custom domain** (Settings → Domains)
-2. **Set up CI/CD** (automatic deployments on push)
-3. **Monitor performance** (Analytics in Vercel dashboard)
-4. **Enable error tracking** (Vercel Monitoring)
+## Environment Variables Needed
 
-## Local Development
+### Frontend (.env)
+```
+REACT_APP_API_URL=https://backend-url.com/api
+REACT_APP_URL=https://frontend-url.vercel.app
+```
 
-To test before deploying:
+### Backend (.env)
+```
+DATABASE_URL=postgresql://user:password@host:5432/database
+PORT=5000
+NODE_ENV=production
+REACT_APP_URL=https://frontend-url.vercel.app
+```
+
+---
+
+## Commands for Local Testing
+
 ```bash
 # Terminal 1 - Backend
 cd itam-saas/Agent
+npm install
 npm start
 
 # Terminal 2 - Frontend
 cd itam-saas/Client
+npm install
 npm start
 ```
 
 Visit http://localhost:3000
+
+---
+
+## Next Steps
+
+1. Deploy backend first (Heroku/Railway/Render)
+2. Get backend URL
+3. Deploy frontend to Vercel with backend URL
+4. Test all operations
+5. Add custom domain
+6. Set up monitoring
+
+## Support
+
+For deployment issues:
+- Check backend logs
+- Check Vercel build logs
+- Check browser console for errors
+- Verify environment variables are set
+- Test API directly with curl/Postman
+
