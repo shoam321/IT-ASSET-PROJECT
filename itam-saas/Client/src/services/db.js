@@ -100,7 +100,8 @@ export async function deleteAsset(id) {
  */
 export async function getAssetStats() {
   try {
-    const response = await fetch(`${API_URL}/../stats`);
+    const statsUrl = `${API_URL.replace('/api', '')}/stats`;
+    const response = await fetch(statsUrl);
     if (!response.ok) throw new Error('Failed to fetch stats');
     return await response.json();
   } catch (error) {
