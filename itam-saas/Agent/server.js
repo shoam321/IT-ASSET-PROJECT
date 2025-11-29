@@ -29,13 +29,21 @@ app.use((req, res, next) => {
 
 // Initialize database on startup
 async function startServer() {
-  try {
-    await db.initDatabase();
-    console.log('✅ Database initialized');
-  } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
-    // Don't exit on error - Vercel needs the server to start
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      await db.initDatabase();
+      console.log('✅ Database initialized successfully');
+      return;
+    } catch (error) {
+      retries--;
+      console.error(`❌ Database init failed (${retries} retries left):`, error.message);
+      if (retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      }
+    }
   }
+  console.warn('⚠️ Database initialization failed after retries - server starting without DB');
 }
 
 // --- ROUTES ---
@@ -130,11 +138,9 @@ startServer();
 // Export for Vercel
 export default app;
 
-// If running locally, start the server
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`\n🚀 IT Asset Tracker Server running on http://localhost:${PORT}`);
-    console.log(`📊 API available at http://localhost:${PORT}/api`);
-    console.log(`🏥 Health check: http://localhost:${PORT}/health\n`);
-  });
-}
+// Start listening (both production and development)
+app.listen(PORT, () => {
+  console.log(`\n🚀 IT Asset Tracker Server running on http://localhost:${PORT}`);
+  console.log(`📊 API available at http://localhost:${PORT}/api`);
+  console.log(`🏥 Health check: http://localhost:${PORT}/health\n`);
+});
