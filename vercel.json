@@ -1,16 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd itam-saas/Client && npm install && npm run build",
+  "buildCommand": "npm --prefix itam-saas/Client run build",
   "outputDirectory": "itam-saas/Client/build",
-  "installCommand": "cd itam-saas/Client && npm install",
-  "env": {
-    "REACT_APP_API_URL": "@react_app_api_url",
-    "REACT_APP_URL": "@react_app_url"
-  },
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "itam-saas/Client/build/index.html"
-    }
-  ]
+  "framework": "react"
 }
