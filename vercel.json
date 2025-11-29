@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "itam-saas/Client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    },
+    {
+      "src": "itam-saas/Agent/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "itam-saas/Agent/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "itam-saas/Client/build/$1",
+      "methods": ["GET", "HEAD"]
+    },
+    {
+      "src": "/(.*)",
+      "dest": "itam-saas/Client/build/index.html"
+    }
+  ],
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "REACT_APP_API_URL": "@react_app_api_url"
+  }
+}
