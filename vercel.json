@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm install --prefix itam-saas/Client && npm run build --prefix itam-saas/Client",
+  "buildCommand": "bash build.sh",
   "outputDirectory": "itam-saas/Client/build",
   "routes": [
     {
