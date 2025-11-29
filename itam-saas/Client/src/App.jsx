@@ -8,6 +8,7 @@ export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     asset_tag: '',
     asset_type: '',
@@ -44,7 +45,12 @@ export default function App() {
 
     try {
       setLoading(true);
-      await dbService.createAsset(formData);
+      if (editingId) {
+        await dbService.updateAsset(editingId, formData);
+        setEditingId(null);
+      } else {
+        await dbService.createAsset(formData);
+      }
       setFormData({
         asset_tag: '',
         asset_type: '',
@@ -57,10 +63,38 @@ export default function App() {
       setShowForm(false);
       await loadAssets();
     } catch (err) {
-      setError(`Failed to add asset: ${err.message}`);
+      setError(`Failed to ${editingId ? 'update' : 'add'} asset: ${err.message}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditAsset = (asset) => {
+    setEditingId(asset.id);
+    setFormData({
+      asset_tag: asset.asset_tag,
+      asset_type: asset.asset_type,
+      manufacturer: asset.manufacturer,
+      model: asset.model,
+      serial_number: asset.serial_number,
+      assigned_user_name: asset.assigned_user_name,
+      status: asset.status
+    });
+    setShowForm(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setShowForm(false);
+    setFormData({
+      asset_tag: '',
+      asset_type: '',
+      manufacturer: '',
+      model: '',
+      serial_number: '',
+      assigned_user_name: '',
+      status: 'In Use'
+    });
   };
 
   const handleDeleteAsset = async (id) => {
@@ -128,7 +162,7 @@ export default function App() {
         {/* Add Asset Form */}
         {showForm && (
           <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 mb-8 shadow-xl">
-            <h2 className="text-xl font-semibold text-white mb-4">Add New Asset</h2>
+            <h2 className="text-xl font-semibold text-white mb-4">{editingId ? 'Edit Asset' : 'Add New Asset'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
@@ -182,10 +216,10 @@ export default function App() {
                 onClick={handleAddAsset}
                 className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition"
               >
-                Save Asset
+                {editingId ? 'Update Asset' : 'Save Asset'}
               </button>
               <button
-                onClick={() => setShowForm(false)}
+                onClick={handleCancelEdit}
                 className="bg-slate-600 hover:bg-slate-500 text-white px-6 py-2 rounded-lg transition"
               >
                 Cancel
@@ -251,7 +285,9 @@ export default function App() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
-                          <button className="text-blue-400 hover:text-blue-300 transition">
+                          <button 
+                            onClick={() => handleEditAsset(asset)}
+                            className="text-blue-400 hover:text-blue-300 transition">
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
