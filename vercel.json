@@ -1,9 +1,6 @@
 {
   "version": 2,
   "scope": "shoam321",
-  "env": {
-    "REACT_APP_API_URL": "@react_app_api_url"
-  },
   "buildCommand": "npm install && npm run build",
   "installCommand": "npm install",
   "outputDirectory": "build"
