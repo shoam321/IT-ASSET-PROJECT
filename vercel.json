@@ -1,23 +1,13 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "itam-saas/Client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
-    }
-  ],
+  "buildCommand": "cd itam-saas/Client && npm install && npm run build",
+  "outputDirectory": "itam-saas/Client/build",
+  "installCommand": "cd itam-saas/Client && npm install",
+  "env": {
+    "REACT_APP_API_URL": "@react_app_api_url",
+    "REACT_APP_URL": "@react_app_url"
+  },
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "destination": "https://your-backend-url.herokuapp.com/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "itam-saas/Client/build/$1"
-    },
     {
       "src": "/(.*)",
       "dest": "itam-saas/Client/build/index.html"
