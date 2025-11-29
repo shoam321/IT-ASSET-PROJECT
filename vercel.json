@@ -1,6 +1,18 @@
 {
   "version": 2,
-  "buildCommand": "npm --prefix itam-saas/Client run build",
-  "outputDirectory": "itam-saas/Client/build",
-  "framework": "react"
+  "builds": [
+    {
+      "src": "itam-saas/Client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "itam-saas/Client/build/index.html"
+    }
+  ]
 }
