@@ -1,5 +1,5 @@
 // Database service for React frontend
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://it-asset-project-production.up.railway.app/api';
 
 /**
  * Fetch all assets from server
