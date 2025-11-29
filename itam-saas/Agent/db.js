@@ -3,11 +3,15 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Parse connection string - handle Railway shared variables
-const connectionString = process.env.DATABASE_URL || process.env['${{ shared.DATABASE_URL }}'];
+// Debug: Log all environment variables
+console.log('=== DATABASE CONNECTION DEBUG ===');
+console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('DATABASE_URL value:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PORT:', process.env.PORT);
+console.log('All env keys:', Object.keys(process.env).filter(k => k.includes('DATABASE') || k.includes('database')));
 
-console.log('DATABASE_URL:', connectionString ? 'Connected' : 'Not found');
-console.log('Environment:', process.env.NODE_ENV);
+const connectionString = process.env.DATABASE_URL;
 
 const pool = new Pool({
   connectionString: connectionString,
