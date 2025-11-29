@@ -1,11 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "cd itam-saas/Client && npm install && CI=false npm run build",
-  "outputDirectory": "itam-saas/Client/build",
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "itam-saas/Client/build/index.html"
-    }
-  ]
+  "scope": "shoam321",
+  "env": {
+    "REACT_APP_API_URL": "@react_app_api_url"
+  },
+  "buildCommand": "npm install && npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": "build"
 }
