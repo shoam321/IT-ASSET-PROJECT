@@ -9,9 +9,13 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// CORS configuration
+const allowedOrigin = process.env.REACT_APP_URL || 'https://it-asset-project.vercel.app';
+console.log('🔧 CORS Origin:', allowedOrigin);
+
 // Middleware
 app.use(cors({
-  origin: process.env.REACT_APP_URL || '*',
+  origin: allowedOrigin,
   credentials: true
 }));
 app.use(bodyParser.json());
