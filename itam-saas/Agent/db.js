@@ -3,8 +3,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Parse connection string with special characters in password
-const connectionString = process.env.DATABASE_URL;
+// Parse connection string - handle Railway shared variables
+const connectionString = process.env.DATABASE_URL || process.env['${{ shared.DATABASE_URL }}'];
+
+console.log('DATABASE_URL:', connectionString ? 'Connected' : 'Not found');
+console.log('Environment:', process.env.NODE_ENV);
 
 const pool = new Pool({
   connectionString: connectionString,
