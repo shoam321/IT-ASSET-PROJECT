@@ -182,14 +182,29 @@ export default function App() {
       alert('Please enter a license name');
       return;
     }
+    if (!licenseFormData.license_type.trim()) {
+      alert('Please select a license type');
+      return;
+    }
 
     try {
       setLoading(true);
+      const dataToSend = {
+        ...licenseFormData,
+        license_name: licenseFormData.license_name.trim(),
+        license_type: licenseFormData.license_type.trim(),
+        software_name: licenseFormData.software_name?.trim() || null,
+        vendor: licenseFormData.vendor?.trim() || null,
+        quantity: parseInt(licenseFormData.quantity) || 1,
+        cost: parseFloat(licenseFormData.cost) || 0,
+        notes: licenseFormData.notes?.trim() || null
+      };
+      
       if (editingId) {
-        await dbService.updateLicense(editingId, licenseFormData);
+        await dbService.updateLicense(editingId, dataToSend);
         setEditingId(null);
       } else {
-        await dbService.createLicense(licenseFormData);
+        await dbService.createLicense(dataToSend);
       }
       setLicenseFormData({
         license_name: '',

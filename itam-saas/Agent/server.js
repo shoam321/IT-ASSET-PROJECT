@@ -160,9 +160,12 @@ app.get('/api/licenses/search/:query', async (req, res) => {
 // Create new license
 app.post('/api/licenses', async (req, res) => {
   try {
+    console.log('📝 Creating license with data:', req.body);
     const license = await db.createLicense(req.body);
+    console.log('✅ License created:', license);
     res.status(201).json(license);
   } catch (error) {
+    console.error('❌ License creation error:', error.message);
     res.status(400).json({ error: error.message });
   }
 });

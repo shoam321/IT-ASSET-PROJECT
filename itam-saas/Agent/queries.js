@@ -228,12 +228,32 @@ export async function getAllLicenses() {
  */
 export async function createLicense(licenseData) {
   const { license_name, license_type, license_key, software_name, vendor, expiration_date, quantity, status, cost, notes } = licenseData;
+  
+  // Validate required fields
+  if (!license_name || !license_name.trim()) {
+    throw new Error('License name is required');
+  }
+  if (!license_type || !license_type.trim()) {
+    throw new Error('License type is required');
+  }
+  
   try {
     const result = await pool.query(
       `INSERT INTO licenses (license_name, license_type, license_key, software_name, vendor, expiration_date, quantity, status, cost, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [license_name, license_type, license_key, software_name, vendor, expiration_date, quantity, status || 'Active', cost || 0, notes]
+      [
+        license_name.trim(), 
+        license_type.trim(), 
+        license_key || null, 
+        software_name || null, 
+        vendor || null, 
+        expiration_date || null, 
+        quantity || 1, 
+        status || 'Active', 
+        cost || 0, 
+        notes || null
+      ]
     );
     return result.rows[0];
   } catch (error) {
