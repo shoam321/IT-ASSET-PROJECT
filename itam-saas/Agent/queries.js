@@ -27,6 +27,46 @@ export async function initDatabase() {
     `);
     console.log('✅ Assets table created/verified');
 
+    // Create licenses table
+    console.log('📝 Creating licenses table if not exists...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS licenses (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        license_name VARCHAR(255) NOT NULL,
+        license_type VARCHAR(50) NOT NULL,
+        license_key VARCHAR(255) UNIQUE,
+        software_name VARCHAR(255),
+        vendor VARCHAR(255),
+        expiration_date DATE,
+        quantity INTEGER DEFAULT 1,
+        status VARCHAR(50) DEFAULT 'Active',
+        cost DECIMAL(10, 2) DEFAULT 0,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Licenses table created/verified');
+
+    // Create users table
+    console.log('📝 Creating users table if not exists...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE,
+        department VARCHAR(255),
+        phone VARCHAR(20),
+        role VARCHAR(50),
+        status VARCHAR(50) DEFAULT 'Active',
+        assigned_assets INTEGER DEFAULT 0,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Users table created/verified');
+
     // Create index on asset_tag for faster queries
     console.log('📝 Creating indexes...');
     await pool.query(`
@@ -37,20 +77,46 @@ export async function initDatabase() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_status ON assets(status);
     `);
+
+    // Create index on license_name for faster queries
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_license_name ON licenses(license_name);
+    `);
+
+    // Create index on license status
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_license_status ON licenses(status);
+    `);
+
+    // Create index on user_name for faster queries
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_user_name ON users(user_name);
+    `);
+
+    // Create index on user status
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_user_status ON users(status);
+    `);
     console.log('✅ Indexes created/verified');
 
-    // Verify table exists
-    const tableCheck = await pool.query(`
+    // Verify tables exist
+    const tablesCheck = await pool.query(`
       SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables 
-        WHERE table_name = 'assets'
-      );
+        SELECT 1 FROM information_schema.tables WHERE table_name = 'assets'
+      ) as assets_exists,
+      EXISTS (
+        SELECT 1 FROM information_schema.tables WHERE table_name = 'licenses'
+      ) as licenses_exists,
+      EXISTS (
+        SELECT 1 FROM information_schema.tables WHERE table_name = 'users'
+      ) as users_exists;
     `);
     
-    if (tableCheck.rows[0].exists) {
+    const { assets_exists, licenses_exists, users_exists } = tablesCheck.rows[0];
+    if (assets_exists && licenses_exists && users_exists) {
       console.log('✅ Database tables initialized successfully');
     } else {
-      throw new Error('Table verification failed');
+      throw new Error(`Table verification failed: assets=${assets_exists}, licenses=${licenses_exists}, users=${users_exists}`);
     }
   } catch (error) {
     console.error('❌ Error initializing database:', error);
@@ -202,6 +268,212 @@ export async function getAssetStats() {
     return result.rows[0];
   } catch (error) {
     console.error('Error fetching stats:', error);
+    throw error;
+  }
+}
+
+// ============ LICENSES FUNCTIONS ============
+
+/**
+ * Get all licenses
+ */
+export async function getAllLicenses() {
+  try {
+    const result = await pool.query('SELECT * FROM licenses ORDER BY created_at DESC');
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching licenses:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create license
+ */
+export async function createLicense(licenseData) {
+  const { license_name, license_type, license_key, software_name, vendor, expiration_date, quantity, status, cost, notes } = licenseData;
+  try {
+    const result = await pool.query(
+      `INSERT INTO licenses (license_name, license_type, license_key, software_name, vendor, expiration_date, quantity, status, cost, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [license_name, license_type, license_key, software_name, vendor, expiration_date, quantity, status || 'Active', cost || 0, notes]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error creating license:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update license
+ */
+export async function updateLicense(id, licenseData) {
+  const fields = [];
+  const values = [];
+  let paramCount = 1;
+
+  for (const [key, value] of Object.entries(licenseData)) {
+    if (value !== undefined && value !== null) {
+      fields.push(`${key} = $${paramCount}`);
+      values.push(value);
+      paramCount++;
+    }
+  }
+
+  if (fields.length === 0) {
+    throw new Error('No fields to update');
+  }
+
+  fields.push(`updated_at = $${paramCount}`);
+  values.push(new Date());
+  values.push(id);
+
+  try {
+    const query = `UPDATE licenses SET ${fields.join(', ')} WHERE id = $${paramCount + 1} RETURNING *`;
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error updating license:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete license
+ */
+export async function deleteLicense(id) {
+  try {
+    const result = await pool.query('DELETE FROM licenses WHERE id = $1 RETURNING *', [id]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error deleting license:', error);
+    throw error;
+  }
+}
+
+/**
+ * Search licenses
+ */
+export async function searchLicenses(query) {
+  try {
+    const searchTerm = `%${query}%`;
+    const result = await pool.query(
+      `SELECT * FROM licenses 
+       WHERE license_name ILIKE $1 
+          OR software_name ILIKE $1 
+          OR vendor ILIKE $1 
+          OR license_key ILIKE $1
+       ORDER BY created_at DESC`,
+      [searchTerm]
+    );
+    return result.rows;
+  } catch (error) {
+    console.error('Error searching licenses:', error);
+    throw error;
+  }
+}
+
+// ============ USERS FUNCTIONS ============
+
+/**
+ * Get all users
+ */
+export async function getAllUsers() {
+  try {
+    const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create user
+ */
+export async function createUser(userData) {
+  const { user_name, email, department, phone, role, status, notes } = userData;
+  try {
+    const result = await pool.query(
+      `INSERT INTO users (user_name, email, department, phone, role, status, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [user_name, email, department, phone, role, status || 'Active', notes]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error creating user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update user
+ */
+export async function updateUser(id, userData) {
+  const fields = [];
+  const values = [];
+  let paramCount = 1;
+
+  for (const [key, value] of Object.entries(userData)) {
+    if (value !== undefined && value !== null) {
+      fields.push(`${key} = $${paramCount}`);
+      values.push(value);
+      paramCount++;
+    }
+  }
+
+  if (fields.length === 0) {
+    throw new Error('No fields to update');
+  }
+
+  fields.push(`updated_at = $${paramCount}`);
+  values.push(new Date());
+  values.push(id);
+
+  try {
+    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramCount + 1} RETURNING *`;
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error updating user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete user
+ */
+export async function deleteUser(id) {
+  try {
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING *', [id]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Search users
+ */
+export async function searchUsers(query) {
+  try {
+    const searchTerm = `%${query}%`;
+    const result = await pool.query(
+      `SELECT * FROM users 
+       WHERE user_name ILIKE $1 
+          OR email ILIKE $1 
+          OR department ILIKE $1 
+          OR phone ILIKE $1
+       ORDER BY created_at DESC`,
+      [searchTerm]
+    );
+    return result.rows;
+  } catch (error) {
+    console.error('Error searching users:', error);
     throw error;
   }
 }
