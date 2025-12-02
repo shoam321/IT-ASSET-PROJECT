@@ -6,6 +6,8 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState('devices');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [assets, setAssets] = useState([]);
+  const [licenses, setLicenses] = useState([]);
+  const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -20,9 +22,32 @@ export default function App() {
     assigned_user_name: '',
     status: 'In Use'
   });
+  const [licenseFormData, setLicenseFormData] = useState({
+    license_name: '',
+    license_type: '',
+    license_key: '',
+    software_name: '',
+    vendor: '',
+    expiration_date: '',
+    quantity: 1,
+    status: 'Active',
+    cost: 0,
+    notes: ''
+  });
+  const [userFormData, setUserFormData] = useState({
+    user_name: '',
+    email: '',
+    department: '',
+    phone: '',
+    role: '',
+    status: 'Active',
+    notes: ''
+  });
 
   useEffect(() => {
     loadAssets();
+    loadLicenses();
+    loadUsers();
   }, []);
 
   const loadAssets = async () => {
@@ -36,6 +61,24 @@ export default function App() {
       setError('Failed to load assets. Make sure the backend server is running on port 5000.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadLicenses = async () => {
+    try {
+      const data = await dbService.fetchLicenses();
+      setLicenses(data);
+    } catch (err) {
+      console.error('Failed to load licenses:', err);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const data = await dbService.fetchUsers();
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to load users:', err);
     }
   };
 
@@ -106,6 +149,111 @@ export default function App() {
       await loadAssets();
     } catch (err) {
       setError(`Failed to delete asset: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // License handlers
+  const handleAddLicense = async () => {
+    if (!licenseFormData.license_name.trim()) {
+      alert('Please enter a license name');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      if (editingId) {
+        await dbService.updateLicense(editingId, licenseFormData);
+        setEditingId(null);
+      } else {
+        await dbService.createLicense(licenseFormData);
+      }
+      setLicenseFormData({
+        license_name: '',
+        license_type: '',
+        license_key: '',
+        software_name: '',
+        vendor: '',
+        expiration_date: '',
+        quantity: 1,
+        status: 'Active',
+        cost: 0,
+        notes: ''
+      });
+      setShowForm(false);
+      await loadLicenses();
+    } catch (err) {
+      setError(`Failed to ${editingId ? 'update' : 'add'} license: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditLicense = (license) => {
+    setEditingId(license.id);
+    setLicenseFormData(license);
+    setShowForm(true);
+  };
+
+  const handleDeleteLicense = async (id) => {
+    try {
+      setLoading(true);
+      await dbService.deleteLicense(id);
+      await loadLicenses();
+    } catch (err) {
+      setError(`Failed to delete license: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // User handlers
+  const handleAddUser = async () => {
+    if (!userFormData.user_name.trim()) {
+      alert('Please enter a user name');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      if (editingId) {
+        await dbService.updateUser(editingId, userFormData);
+        setEditingId(null);
+      } else {
+        await dbService.createUser(userFormData);
+      }
+      setUserFormData({
+        user_name: '',
+        email: '',
+        department: '',
+        phone: '',
+        role: '',
+        status: 'Active',
+        notes: ''
+      });
+      setShowForm(false);
+      await loadUsers();
+    } catch (err) {
+      setError(`Failed to ${editingId ? 'update' : 'add'} user: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditUser = (user) => {
+    setEditingId(user.id);
+    setUserFormData(user);
+    setShowForm(true);
+  };
+
+  const handleDeleteUser = async (id) => {
+    try {
+      setLoading(true);
+      await dbService.deleteUser(id);
+      await loadUsers();
+    } catch (err) {
+      setError(`Failed to delete user: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -302,23 +450,390 @@ export default function App() {
   );
 
   const renderLicensesScreen = () => (
-    <div className="flex items-center justify-center py-16">
-      <div className="text-center">
-        <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-white mb-2">Licenses</h2>
-        <p className="text-slate-400">Licenses module - coming soon</p>
+    <>
+      {error && (
+        <div className="mb-6 p-4 bg-red-900 border border-red-700 rounded-lg">
+          <p className="text-red-200">{error}</p>
+          <button 
+            onClick={() => setError(null)}
+            className="text-sm mt-2 underline hover:no-underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {loading && (
+        <div className="mb-6 p-4 bg-blue-900 border border-blue-700 rounded-lg">
+          <p className="text-blue-200">Loading...</p>
+        </div>
+      )}
+
+      {showForm && (
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 mb-8 shadow-xl">
+          <h2 className="text-xl font-semibold text-white mb-4">{editingId ? 'Edit License' : 'Add New License'}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="License Name"
+              value={licenseFormData.license_name}
+              onChange={(e) => setLicenseFormData({...licenseFormData, license_name: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="License Type"
+              value={licenseFormData.license_type}
+              onChange={(e) => setLicenseFormData({...licenseFormData, license_type: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="License Key"
+              value={licenseFormData.license_key}
+              onChange={(e) => setLicenseFormData({...licenseFormData, license_key: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="Software Name"
+              value={licenseFormData.software_name}
+              onChange={(e) => setLicenseFormData({...licenseFormData, software_name: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="Vendor"
+              value={licenseFormData.vendor}
+              onChange={(e) => setLicenseFormData({...licenseFormData, vendor: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="date"
+              placeholder="Expiration Date"
+              value={licenseFormData.expiration_date}
+              onChange={(e) => setLicenseFormData({...licenseFormData, expiration_date: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="number"
+              placeholder="Quantity"
+              value={licenseFormData.quantity}
+              onChange={(e) => setLicenseFormData({...licenseFormData, quantity: parseInt(e.target.value)})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <select
+              value={licenseFormData.status}
+              onChange={(e) => setLicenseFormData({...licenseFormData, status: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white"
+            >
+              <option value="Active">Active</option>
+              <option value="Expired">Expired</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={handleAddLicense}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition"
+            >
+              {editingId ? 'Update License' : 'Save License'}
+            </button>
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setShowForm(false);
+                setLicenseFormData({
+                  license_name: '',
+                  license_type: '',
+                  license_key: '',
+                  software_name: '',
+                  vendor: '',
+                  expiration_date: '',
+                  quantity: 1,
+                  status: 'Active',
+                  cost: 0,
+                  notes: ''
+                });
+              }}
+              className="bg-slate-600 hover:bg-slate-500 text-white px-6 py-2 rounded-lg transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-8">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search licenses..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+          />
+        </div>
       </div>
-    </div>
+
+      <div className="bg-slate-700 border border-slate-600 rounded-lg overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-800 border-b border-slate-600">
+              <tr>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">License Name</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Software</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Vendor</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Expiration Date</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Status</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {licenses.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-8 text-center text-slate-400">
+                    No licenses found
+                  </td>
+                </tr>
+              ) : (
+                licenses.filter(lic => searchTerm ? lic.license_name.toLowerCase().includes(searchTerm.toLowerCase()) || lic.software_name?.toLowerCase().includes(searchTerm.toLowerCase()) : true).map((license) => (
+                  <tr key={license.id} className="border-b border-slate-600 hover:bg-slate-600 transition">
+                    <td className="px-6 py-4 text-white font-medium">{license.license_name}</td>
+                    <td className="px-6 py-4 text-slate-300">{license.software_name}</td>
+                    <td className="px-6 py-4 text-slate-300">{license.vendor}</td>
+                    <td className="px-6 py-4 text-slate-300">{license.expiration_date}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        license.status === 'Active' ? 'bg-green-900 text-green-200' : license.status === 'Expired' ? 'bg-red-900 text-red-200' : 'bg-yellow-900 text-yellow-200'
+                      }`}>
+                        {license.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleEditLicense(license)}
+                          className="text-blue-400 hover:text-blue-300 transition">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteLicense(license.id)}
+                          className="text-red-400 hover:text-red-300 transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
+          <p className="text-slate-400 text-sm">Total Licenses</p>
+          <p className="text-3xl font-bold text-white mt-2">{licenses.length}</p>
+        </div>
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
+          <p className="text-slate-400 text-sm">Active</p>
+          <p className="text-3xl font-bold text-green-400 mt-2">{licenses.filter(l => l.status === 'Active').length}</p>
+        </div>
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
+          <p className="text-slate-400 text-sm">Expired</p>
+          <p className="text-3xl font-bold text-red-400 mt-2">{licenses.filter(l => l.status === 'Expired').length}</p>
+        </div>
+      </div>
+    </>
   );
 
   const renderUsersScreen = () => (
-    <div className="flex items-center justify-center py-16">
-      <div className="text-center">
-        <Users className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-white mb-2">Users</h2>
-        <p className="text-slate-400">Users module - coming soon</p>
+    <>
+      {error && (
+        <div className="mb-6 p-4 bg-red-900 border border-red-700 rounded-lg">
+          <p className="text-red-200">{error}</p>
+          <button 
+            onClick={() => setError(null)}
+            className="text-sm mt-2 underline hover:no-underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {loading && (
+        <div className="mb-6 p-4 bg-blue-900 border border-blue-700 rounded-lg">
+          <p className="text-blue-200">Loading...</p>
+        </div>
+      )}
+
+      {showForm && (
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 mb-8 shadow-xl">
+          <h2 className="text-xl font-semibold text-white mb-4">{editingId ? 'Edit User' : 'Add New User'}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="User Name"
+              value={userFormData.user_name}
+              onChange={(e) => setUserFormData({...userFormData, user_name: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={userFormData.email}
+              onChange={(e) => setUserFormData({...userFormData, email: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="Department"
+              value={userFormData.department}
+              onChange={(e) => setUserFormData({...userFormData, department: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="tel"
+              placeholder="Phone"
+              value={userFormData.phone}
+              onChange={(e) => setUserFormData({...userFormData, phone: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="Role"
+              value={userFormData.role}
+              onChange={(e) => setUserFormData({...userFormData, role: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <select
+              value={userFormData.status}
+              onChange={(e) => setUserFormData({...userFormData, status: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white"
+            >
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Suspended">Suspended</option>
+            </select>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={handleAddUser}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition"
+            >
+              {editingId ? 'Update User' : 'Save User'}
+            </button>
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setShowForm(false);
+                setUserFormData({
+                  user_name: '',
+                  email: '',
+                  department: '',
+                  phone: '',
+                  role: '',
+                  status: 'Active',
+                  notes: ''
+                });
+              }}
+              className="bg-slate-600 hover:bg-slate-500 text-white px-6 py-2 rounded-lg transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-8">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+          />
+        </div>
       </div>
-    </div>
+
+      <div className="bg-slate-700 border border-slate-600 rounded-lg overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-800 border-b border-slate-600">
+              <tr>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">User Name</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Email</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Department</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Phone</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Status</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-8 text-center text-slate-400">
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                users.filter(user => searchTerm ? user.user_name.toLowerCase().includes(searchTerm.toLowerCase()) || user.email?.toLowerCase().includes(searchTerm.toLowerCase()) : true).map((user) => (
+                  <tr key={user.id} className="border-b border-slate-600 hover:bg-slate-600 transition">
+                    <td className="px-6 py-4 text-white font-medium">{user.user_name}</td>
+                    <td className="px-6 py-4 text-slate-300">{user.email}</td>
+                    <td className="px-6 py-4 text-slate-300">{user.department}</td>
+                    <td className="px-6 py-4 text-slate-300">{user.phone}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        user.status === 'Active' ? 'bg-green-900 text-green-200' : user.status === 'Suspended' ? 'bg-red-900 text-red-200' : 'bg-yellow-900 text-yellow-200'
+                      }`}>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleEditUser(user)}
+                          className="text-blue-400 hover:text-blue-300 transition">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="text-red-400 hover:text-red-300 transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
+          <p className="text-slate-400 text-sm">Total Users</p>
+          <p className="text-3xl font-bold text-white mt-2">{users.length}</p>
+        </div>
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
+          <p className="text-slate-400 text-sm">Active</p>
+          <p className="text-3xl font-bold text-green-400 mt-2">{users.filter(u => u.status === 'Active').length}</p>
+        </div>
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
+          <p className="text-slate-400 text-sm">Inactive</p>
+          <p className="text-3xl font-bold text-red-400 mt-2">{users.filter(u => u.status === 'Inactive').length}</p>
+        </div>
+      </div>
+    </>
   );
 
   const renderContractsScreen = () => (
@@ -427,6 +942,26 @@ export default function App() {
               >
                 <Plus className="w-5 h-5" />
                 Add Device
+              </button>
+            )}
+            
+            {currentScreen === 'licenses' && (
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              >
+                <Plus className="w-5 h-5" />
+                Add License
+              </button>
+            )}
+            
+            {currentScreen === 'users' && (
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              >
+                <Plus className="w-5 h-5" />
+                Add User
               </button>
             )}
           </div>
