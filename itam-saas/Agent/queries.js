@@ -1,105 +1,11 @@
 import pool from './db.js';
 
 /**
- * Initialize database tables - Create if they don't exist
+ * Verify database tables exist (no automatic creation)
  */
 export async function initDatabase() {
   try {
-    console.log('🔄 Starting database initialization...');
-    
-    // Create assets table
-    console.log('📝 Creating assets table if not exists...');
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS assets (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        asset_tag VARCHAR(255) UNIQUE NOT NULL,
-        asset_type VARCHAR(50) NOT NULL,
-        manufacturer VARCHAR(255),
-        model VARCHAR(255),
-        serial_number VARCHAR(255) UNIQUE,
-        assigned_user_name VARCHAR(255),
-        status VARCHAR(50) DEFAULT 'In Use',
-        cost DECIMAL(10, 2) DEFAULT 0,
-        discovered BOOLEAN DEFAULT false,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log('✅ Assets table created/verified');
-
-    // Create licenses table
-    console.log('📝 Creating licenses table if not exists...');
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS licenses (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        license_name VARCHAR(255) NOT NULL,
-        license_type VARCHAR(50) NOT NULL,
-        license_key VARCHAR(255) UNIQUE,
-        software_name VARCHAR(255),
-        vendor VARCHAR(255),
-        expiration_date DATE,
-        quantity INTEGER DEFAULT 1,
-        status VARCHAR(50) DEFAULT 'Active',
-        cost DECIMAL(10, 2) DEFAULT 0,
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log('✅ Licenses table created/verified');
-
-    // Create users table
-    console.log('📝 Creating users table if not exists...');
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE,
-        department VARCHAR(255),
-        phone VARCHAR(20),
-        role VARCHAR(50),
-        status VARCHAR(50) DEFAULT 'Active',
-        assigned_assets INTEGER DEFAULT 0,
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log('✅ Users table created/verified');
-
-    // Create contracts table
-    console.log('📝 Creating contracts table if not exists...');
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS contracts (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        contract_name VARCHAR(255) NOT NULL,
-        vendor VARCHAR(255),
-        contract_type VARCHAR(50),
-        start_date DATE,
-        end_date DATE,
-        contract_value DECIMAL(12, 2) DEFAULT 0,
-        status VARCHAR(50) DEFAULT 'Active',
-        renewal_date DATE,
-        contact_person VARCHAR(255),
-        contact_email VARCHAR(255),
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log('✅ Contracts table created/verified');
-
-    // Create indexes
-    console.log('📝 Creating indexes...');
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_asset_tag ON assets(asset_tag);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_status ON assets(status);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_license_name ON licenses(license_name);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_license_status ON licenses(status);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_name ON users(user_name);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_status ON users(status);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_contract_name ON contracts(contract_name);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_contract_status ON contracts(status);`);
-    console.log('✅ Indexes created/verified');
+    console.log('🔄 Verifying database tables...');
 
     // Verify tables exist
     const tablesCheck = await pool.query(`
@@ -118,13 +24,38 @@ export async function initDatabase() {
     `);
     
     const { assets_exists, licenses_exists, users_exists, contracts_exists } = tablesCheck.rows[0];
-    if (assets_exists && licenses_exists && users_exists && contracts_exists) {
-      console.log('✅ Database tables initialized successfully');
+    
+    if (assets_exists) {
+      console.log('✅ Assets table exists');
     } else {
-      throw new Error(`Table verification failed: assets=${assets_exists}, licenses=${licenses_exists}, users=${users_exists}, contracts=${contracts_exists}`);
+      console.warn('⚠️ Assets table not found');
+    }
+    
+    if (licenses_exists) {
+      console.log('✅ Licenses table exists');
+    } else {
+      console.warn('⚠️ Licenses table not found');
+    }
+    
+    if (users_exists) {
+      console.log('✅ Users table exists');
+    } else {
+      console.warn('⚠️ Users table not found');
+    }
+    
+    if (contracts_exists) {
+      console.log('✅ Contracts table exists');
+    } else {
+      console.warn('⚠️ Contracts table not found');
+    }
+    
+    if (assets_exists && licenses_exists && users_exists && contracts_exists) {
+      console.log('✅ All required database tables verified successfully');
+    } else {
+      throw new Error(`Missing tables: assets=${assets_exists}, licenses=${licenses_exists}, users=${users_exists}, contracts=${contracts_exists}`);
     }
   } catch (error) {
-    console.error('❌ Error initializing database:', error);
+    console.error('❌ Error verifying database:', error);
     throw error;
   }
 }
