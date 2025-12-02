@@ -8,6 +8,7 @@ export default function App() {
   const [assets, setAssets] = useState([]);
   const [licenses, setLicenses] = useState([]);
   const [users, setUsers] = useState([]);
+  const [contracts, setContracts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,11 +44,23 @@ export default function App() {
     status: 'Active',
     notes: ''
   });
+  const [contractFormData, setContractFormData] = useState({
+    contract_name: '',
+    vendor: '',
+    contract_type: '',
+    start_date: '',
+    end_date: '',
+    value: 0,
+    currency: 'USD',
+    status: 'Active',
+    description: ''
+  });
 
   useEffect(() => {
     loadAssets();
     loadLicenses();
     loadUsers();
+    loadContracts();
   }, []);
 
   const loadAssets = async () => {
@@ -79,6 +92,15 @@ export default function App() {
       setUsers(data);
     } catch (err) {
       console.error('Failed to load users:', err);
+    }
+  };
+
+  const loadContracts = async () => {
+    try {
+      const data = await dbService.fetchContracts();
+      setContracts(data);
+    } catch (err) {
+      console.error('Failed to load contracts:', err);
     }
   };
 
@@ -254,6 +276,59 @@ export default function App() {
       await loadUsers();
     } catch (err) {
       setError(`Failed to delete user: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Contract handlers
+  const handleAddContract = async () => {
+    if (!contractFormData.contract_name.trim()) {
+      alert('Please enter a contract name');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      if (editingId) {
+        await dbService.updateContract(editingId, contractFormData);
+        setEditingId(null);
+      } else {
+        await dbService.createContract(contractFormData);
+      }
+      setContractFormData({
+        contract_name: '',
+        vendor: '',
+        contract_type: '',
+        start_date: '',
+        end_date: '',
+        value: 0,
+        currency: 'USD',
+        status: 'Active',
+        description: ''
+      });
+      setShowForm(false);
+      await loadContracts();
+    } catch (err) {
+      setError(`Failed to ${editingId ? 'update' : 'add'} contract: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditContract = (contract) => {
+    setEditingId(contract.id);
+    setContractFormData(contract);
+    setShowForm(true);
+  };
+
+  const handleDeleteContract = async (id) => {
+    try {
+      setLoading(true);
+      await dbService.deleteContract(id);
+      await loadContracts();
+    } catch (err) {
+      setError(`Failed to delete contract: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -837,13 +912,229 @@ export default function App() {
   );
 
   const renderContractsScreen = () => (
-    <div className="flex items-center justify-center py-16">
-      <div className="text-center">
-        <FileCheck className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-white mb-2">Contracts</h2>
-        <p className="text-slate-400">Contracts module - coming soon</p>
+    <>
+      {error && (
+        <div className="mb-6 p-4 bg-red-900 border border-red-700 rounded-lg">
+          <p className="text-red-200">{error}</p>
+          <button 
+            onClick={() => setError(null)}
+            className="text-sm mt-2 underline hover:no-underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {loading && (
+        <div className="mb-6 p-4 bg-blue-900 border border-blue-700 rounded-lg">
+          <p className="text-blue-200">Loading...</p>
+        </div>
+      )}
+
+      {showForm && (
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 mb-8 shadow-xl">
+          <h2 className="text-xl font-semibold text-white mb-4">{editingId ? 'Edit Contract' : 'Add New Contract'}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Contract Name"
+              value={contractFormData.contract_name}
+              onChange={(e) => setContractFormData({...contractFormData, contract_name: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="Vendor"
+              value={contractFormData.vendor}
+              onChange={(e) => setContractFormData({...contractFormData, vendor: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <select
+              value={contractFormData.contract_type}
+              onChange={(e) => setContractFormData({...contractFormData, contract_type: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white"
+            >
+              <option value="">Select Contract Type</option>
+              <option value="Service">Service</option>
+              <option value="Software">Software</option>
+              <option value="Hardware">Hardware</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Support">Support</option>
+            </select>
+            <input
+              type="date"
+              placeholder="Start Date"
+              value={contractFormData.start_date}
+              onChange={(e) => setContractFormData({...contractFormData, start_date: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <input
+              type="date"
+              placeholder="End Date"
+              value={contractFormData.end_date}
+              onChange={(e) => setContractFormData({...contractFormData, end_date: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+            />
+            <div className="flex gap-2">
+              <input
+                type="number"
+                placeholder="Value"
+                value={contractFormData.value}
+                onChange={(e) => setContractFormData({...contractFormData, value: parseFloat(e.target.value)})}
+                className="flex-1 px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400"
+              />
+              <select
+                value={contractFormData.currency}
+                onChange={(e) => setContractFormData({...contractFormData, currency: e.target.value})}
+                className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white w-24"
+              >
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+                <option value="ILS">ILS</option>
+              </select>
+            </div>
+            <select
+              value={contractFormData.status}
+              onChange={(e) => setContractFormData({...contractFormData, status: e.target.value})}
+              className="px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white"
+            >
+              <option value="Active">Active</option>
+              <option value="Expired">Expired</option>
+              <option value="Pending">Pending</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+            <textarea
+              placeholder="Description"
+              value={contractFormData.description}
+              onChange={(e) => setContractFormData({...contractFormData, description: e.target.value})}
+              className="col-span-2 px-4 py-2 bg-slate-600 border border-slate-500 rounded text-white placeholder-slate-400 h-20"
+            />
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={handleAddContract}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition"
+            >
+              {editingId ? 'Update Contract' : 'Save Contract'}
+            </button>
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setShowForm(false);
+                setContractFormData({
+                  contract_name: '',
+                  vendor: '',
+                  contract_type: '',
+                  start_date: '',
+                  end_date: '',
+                  value: 0,
+                  currency: 'USD',
+                  status: 'Active',
+                  description: ''
+                });
+              }}
+              className="bg-slate-600 hover:bg-slate-500 text-white px-6 py-2 rounded-lg transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-8">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search contracts..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+          />
+        </div>
       </div>
-    </div>
+
+      <div className="bg-slate-700 border border-slate-600 rounded-lg overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-800 border-b border-slate-600">
+              <tr>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Contract Name</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Vendor</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Type</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Start Date</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">End Date</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Value</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Status</th>
+                <th className="px-6 py-3 text-left text-slate-300 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {contracts.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-8 text-center text-slate-400">
+                    No contracts found
+                  </td>
+                </tr>
+              ) : (
+                contracts.filter(contract => searchTerm ? contract.contract_name.toLowerCase().includes(searchTerm.toLowerCase()) || contract.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) : true).map((contract) => (
+                  <tr key={contract.id} className="border-b border-slate-600 hover:bg-slate-600 transition">
+                    <td className="px-6 py-4 text-white font-medium">{contract.contract_name}</td>
+                    <td className="px-6 py-4 text-slate-300">{contract.vendor}</td>
+                    <td className="px-6 py-4 text-slate-300">
+                      <span className="bg-purple-900 text-purple-200 px-2 py-1 rounded text-xs">
+                        {contract.contract_type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-300">{contract.start_date}</td>
+                    <td className="px-6 py-4 text-slate-300">{contract.end_date}</td>
+                    <td className="px-6 py-4 text-slate-300">{contract.value} {contract.currency}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        contract.status === 'Active' ? 'bg-green-900 text-green-200' : contract.status === 'Expired' ? 'bg-red-900 text-red-200' : contract.status === 'Pending' ? 'bg-yellow-900 text-yellow-200' : 'bg-slate-900 text-slate-200'
+                      }`}>
+                        {contract.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleEditContract(contract)}
+                          className="text-blue-400 hover:text-blue-300 transition">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteContract(contract.id)}
+                          className="text-red-400 hover:text-red-300 transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
+          <p className="text-slate-400 text-sm">Total Contracts</p>
+          <p className="text-3xl font-bold text-white mt-2">{contracts.length}</p>
+        </div>
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
+          <p className="text-slate-400 text-sm">Active</p>
+          <p className="text-3xl font-bold text-green-400 mt-2">{contracts.filter(c => c.status === 'Active').length}</p>
+        </div>
+        <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
+          <p className="text-slate-400 text-sm">Total Value</p>
+          <p className="text-3xl font-bold text-blue-400 mt-2">{contracts.reduce((sum, c) => sum + (c.value || 0), 0).toLocaleString()}</p>
+        </div>
+      </div>
+    </>
   );
 
   const renderScreen = () => {
@@ -962,6 +1253,16 @@ export default function App() {
               >
                 <Plus className="w-5 h-5" />
                 Add User
+              </button>
+            )}
+            
+            {currentScreen === 'contracts' && (
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              >
+                <Plus className="w-5 h-5" />
+                Add Contract
               </button>
             )}
           </div>
