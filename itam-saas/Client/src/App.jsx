@@ -3,7 +3,7 @@ import { Package, Plus, Search, Trash2, Edit2, Menu, X, HardDrive, FileText, Use
 import * as dbService from './services/db';
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('devices');
+  const [currentScreen, setCurrentScreen] = useState('assets');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [assets, setAssets] = useState([]);
   const [licenses, setLicenses] = useState([]);
@@ -343,7 +343,7 @@ export default function App() {
     : assets;
 
   // Screen rendering functions
-  const renderDevicesScreen = () => (
+  const renderAssetsScreen = () => (
     <>
       {error && (
         <div className="mb-6 p-4 bg-red-900 border border-red-700 rounded-lg">
@@ -365,7 +365,7 @@ export default function App() {
 
       {showForm && (
         <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 mb-8 shadow-xl">
-          <h2 className="text-xl font-semibold text-white mb-4">{editingId ? 'Edit Device' : 'Add New Device'}</h2>
+          <h2 className="text-xl font-semibold text-white mb-4">{editingId ? 'Edit Asset' : 'Add New Asset'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               type="text"
@@ -422,7 +422,19 @@ export default function App() {
               {editingId ? 'Update Device' : 'Save Device'}
             </button>
             <button
-              onClick={handleCancelEdit}
+              onClick={() => {
+                setEditingId(null);
+                setShowForm(false);
+                setFormData({
+                  asset_tag: '',
+                  asset_type: '',
+                  manufacturer: '',
+                  model: '',
+                  serial_number: '',
+                  assigned_user_name: '',
+                  status: 'In Use'
+                });
+              }}
               className="bg-slate-600 hover:bg-slate-500 text-white px-6 py-2 rounded-lg transition"
             >
               Cancel
@@ -436,7 +448,7 @@ export default function App() {
           <Search className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search devices..."
+            placeholder="Search assets..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
@@ -462,7 +474,7 @@ export default function App() {
               {filteredAssets.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-6 py-8 text-center text-slate-400">
-                    No devices found
+                    No assets found
                   </td>
                 </tr>
               ) : (
@@ -509,7 +521,7 @@ export default function App() {
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
-          <p className="text-slate-400 text-sm">Total Devices</p>
+          <p className="text-slate-400 text-sm">Total Assets</p>
           <p className="text-3xl font-bold text-white mt-2">{assets.length}</p>
         </div>
         <div className="bg-slate-700 border border-slate-600 rounded-lg p-6 shadow-lg">
@@ -1139,8 +1151,8 @@ export default function App() {
 
   const renderScreen = () => {
     switch(currentScreen) {
-      case 'devices':
-        return renderDevicesScreen();
+      case 'assets':
+        return renderAssetsScreen();
       case 'licenses':
         return renderLicensesScreen();
       case 'users':
@@ -1148,7 +1160,7 @@ export default function App() {
       case 'contracts':
         return renderContractsScreen();
       default:
-        return renderDevicesScreen();
+        return renderAssetsScreen();
     }
   };
 
@@ -1165,15 +1177,15 @@ export default function App() {
 
         <nav className="flex-1 p-4 space-y-2">
           <button
-            onClick={() => { setCurrentScreen('devices'); setShowForm(false); }}
+            onClick={() => { setCurrentScreen('assets'); setShowForm(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-              currentScreen === 'devices' 
+              currentScreen === 'assets' 
                 ? 'bg-blue-600 text-white' 
                 : 'text-slate-400 hover:bg-slate-700'
             }`}
           >
             <HardDrive className="w-5 h-5" />
-            <span>Devices</span>
+            <span>Assets</span>
           </button>
 
           <button
@@ -1226,13 +1238,13 @@ export default function App() {
               {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
             
-            {currentScreen === 'devices' && (
+            {currentScreen === 'assets' && (
               <button
                 onClick={() => setShowForm(!showForm)}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
               >
                 <Plus className="w-5 h-5" />
-                Add Device
+                Add Asset
               </button>
             )}
             
