@@ -29,9 +29,10 @@ app.use((req, res, next) => {
 
 // Initialize database on startup
 async function startServer() {
-  let retries = 3;
+  let retries = 5;
   while (retries > 0) {
     try {
+      console.log(`🔄 Attempting to initialize database (${6 - retries}/5)...`);
       await db.initDatabase();
       console.log('✅ Database initialized successfully');
       return;
@@ -39,7 +40,9 @@ async function startServer() {
       retries--;
       console.error(`❌ Database init failed (${retries} retries left):`, error.message);
       if (retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        const waitTime = 3000; // 3 seconds
+        console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
   }

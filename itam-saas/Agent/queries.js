@@ -5,7 +5,10 @@ import pool from './db.js';
  */
 export async function initDatabase() {
   try {
+    console.log('🔄 Starting database initialization...');
+    
     // Create assets table
+    console.log('📝 Creating assets table if not exists...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS assets (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -22,8 +25,10 @@ export async function initDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    console.log('✅ Assets table created/verified');
 
     // Create index on asset_tag for faster queries
+    console.log('📝 Creating indexes...');
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_asset_tag ON assets(asset_tag);
     `);
@@ -32,8 +37,21 @@ export async function initDatabase() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_status ON assets(status);
     `);
+    console.log('✅ Indexes created/verified');
 
-    console.log('✅ Database tables initialized successfully');
+    // Verify table exists
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_name = 'assets'
+      );
+    `);
+    
+    if (tableCheck.rows[0].exists) {
+      console.log('✅ Database tables initialized successfully');
+    } else {
+      throw new Error('Table verification failed');
+    }
   } catch (error) {
     console.error('❌ Error initializing database:', error);
     throw error;
