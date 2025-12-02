@@ -173,12 +173,15 @@ app.post('/api/licenses', async (req, res) => {
 // Update license
 app.put('/api/licenses/:id', async (req, res) => {
   try {
+    console.log('📝 Updating license', req.params.id, 'with data:', req.body);
     const license = await db.updateLicense(req.params.id, req.body);
     if (!license) {
       return res.status(404).json({ error: 'License not found' });
     }
+    console.log('✅ License updated:', license);
     res.json(license);
   } catch (error) {
+    console.error('❌ License update error:', error.message);
     res.status(400).json({ error: error.message });
   }
 });

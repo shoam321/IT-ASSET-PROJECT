@@ -289,11 +289,20 @@ export async function updateLicense(id, licenseData) {
   const fields = [];
   const values = [];
   let paramCount = 1;
+  
+  // Fields that should not be updated
+  const excludeFields = ['id', 'created_at', 'updated_at'];
 
   for (const [key, value] of Object.entries(licenseData)) {
-    if (value !== undefined && value !== null) {
-      let processedValue = value;
-      
+    // Skip excluded fields and undefined values
+    if (excludeFields.includes(key) || value === undefined) {
+      continue;
+    }
+    
+    // Allow null values to be set
+    let processedValue = value;
+    
+    if (value !== null) {
       // Format date fields
       if (key === 'expiration_date' && typeof value === 'string') {
         if (value.includes('T')) {
@@ -310,11 +319,11 @@ export async function updateLicense(id, licenseData) {
       if (typeof processedValue === 'string') {
         processedValue = processedValue.trim();
       }
-      
-      fields.push(`${key} = $${paramCount}`);
-      values.push(processedValue);
-      paramCount++;
     }
+    
+    fields.push(`${key} = $${paramCount}`);
+    values.push(processedValue);
+    paramCount++;
   }
 
   if (fields.length === 0) {
@@ -327,6 +336,8 @@ export async function updateLicense(id, licenseData) {
 
   try {
     const query = `UPDATE licenses SET ${fields.join(', ')} WHERE id = $${paramCount + 1} RETURNING *`;
+    console.log('Update query:', query);
+    console.log('Update values:', values);
     const result = await pool.query(query, values);
     return result.rows[0];
   } catch (error) {
