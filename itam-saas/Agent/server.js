@@ -251,6 +251,64 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
+// --- CONTRACTS ROUTES ---
+
+// Get all contracts
+app.get('/api/contracts', async (req, res) => {
+  try {
+    const contracts = await db.getAllContracts();
+    res.json(contracts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Search contracts
+app.get('/api/contracts/search/:query', async (req, res) => {
+  try {
+    const contracts = await db.searchContracts(req.params.query);
+    res.json(contracts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create new contract
+app.post('/api/contracts', async (req, res) => {
+  try {
+    const contract = await db.createContract(req.body);
+    res.status(201).json(contract);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Update contract
+app.put('/api/contracts/:id', async (req, res) => {
+  try {
+    const contract = await db.updateContract(req.params.id, req.body);
+    if (!contract) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+    res.json(contract);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Delete contract
+app.delete('/api/contracts/:id', async (req, res) => {
+  try {
+    const contract = await db.deleteContract(req.params.id);
+    if (!contract) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+    res.json({ message: 'Contract deleted', contract });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Initialize and start server
 startServer();
 

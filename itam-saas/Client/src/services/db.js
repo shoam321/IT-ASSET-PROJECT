@@ -273,3 +273,85 @@ export async function deleteUser(id) {
     throw error;
   }
 }
+
+// ============ CONTRACTS FUNCTIONS ============
+
+/**
+ * Fetch all contracts from server
+ */
+export async function fetchContracts() {
+  try {
+    const response = await fetch(`${API_URL}/contracts`);
+    if (!response.ok) throw new Error('Failed to fetch contracts');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching contracts:', error);
+    throw error;
+  }
+}
+
+/**
+ * Search contracts
+ */
+export async function searchContracts(query) {
+  try {
+    const response = await fetch(`${API_URL}/contracts/search/${encodeURIComponent(query)}`);
+    if (!response.ok) throw new Error('Failed to search contracts');
+    return await response.json();
+  } catch (error) {
+    console.error('Error searching contracts:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create new contract
+ */
+export async function createContract(contractData) {
+  try {
+    const response = await fetch(`${API_URL}/contracts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contractData),
+    });
+    if (!response.ok) throw new Error('Failed to create contract');
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating contract:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update contract
+ */
+export async function updateContract(id, contractData) {
+  try {
+    const response = await fetch(`${API_URL}/contracts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contractData),
+    });
+    if (!response.ok) throw new Error('Failed to update contract');
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating contract:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete contract
+ */
+export async function deleteContract(id) {
+  try {
+    const response = await fetch(`${API_URL}/contracts/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete contract');
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting contract:', error);
+    throw error;
+  }
+}

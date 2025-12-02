@@ -67,6 +67,28 @@ export async function initDatabase() {
     `);
     console.log('✅ Users table created/verified');
 
+    // Create contracts table
+    console.log('📝 Creating contracts table if not exists...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contracts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        contract_name VARCHAR(255) NOT NULL,
+        vendor VARCHAR(255),
+        contract_type VARCHAR(50),
+        start_date DATE,
+        end_date DATE,
+        contract_value DECIMAL(12, 2) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'Active',
+        renewal_date DATE,
+        contact_person VARCHAR(255),
+        contact_email VARCHAR(255),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Contracts table created/verified');
+
     // Create index on asset_tag for faster queries
     console.log('📝 Creating indexes...');
     await pool.query(`
@@ -97,6 +119,16 @@ export async function initDatabase() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_user_status ON users(status);
     `);
+
+    // Create index on contract_name for faster queries
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_contract_name ON contracts(contract_name);
+    `);
+
+    // Create index on contract status
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_contract_status ON contracts(status);
+    `);
     console.log('✅ Indexes created/verified');
 
     // Verify tables exist
@@ -109,14 +141,17 @@ export async function initDatabase() {
       ) as licenses_exists,
       EXISTS (
         SELECT 1 FROM information_schema.tables WHERE table_name = 'users'
-      ) as users_exists;
+      ) as users_exists,
+      EXISTS (
+        SELECT 1 FROM information_schema.tables WHERE table_name = 'contracts'
+      ) as contracts_exists;
     `);
     
-    const { assets_exists, licenses_exists, users_exists } = tablesCheck.rows[0];
-    if (assets_exists && licenses_exists && users_exists) {
+    const { assets_exists, licenses_exists, users_exists, contracts_exists } = tablesCheck.rows[0];
+    if (assets_exists && licenses_exists && users_exists && contracts_exists) {
       console.log('✅ Database tables initialized successfully');
     } else {
-      throw new Error(`Table verification failed: assets=${assets_exists}, licenses=${licenses_exists}, users=${users_exists}`);
+      throw new Error(`Table verification failed: assets=${assets_exists}, licenses=${licenses_exists}, users=${users_exists}, contracts=${contracts_exists}`);
     }
   } catch (error) {
     console.error('❌ Error initializing database:', error);
@@ -474,6 +509,109 @@ export async function searchUsers(query) {
     return result.rows;
   } catch (error) {
     console.error('Error searching users:', error);
+    throw error;
+  }
+}
+
+// ============ CONTRACTS FUNCTIONS ============
+
+/**
+ * Get all contracts
+ */
+export async function getAllContracts() {
+  try {
+    const result = await pool.query('SELECT * FROM contracts ORDER BY created_at DESC');
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching contracts:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create contract
+ */
+export async function createContract(contractData) {
+  const { contract_name, vendor, contract_type, start_date, end_date, contract_value, status, renewal_date, contact_person, contact_email, notes } = contractData;
+  try {
+    const result = await pool.query(
+      `INSERT INTO contracts (contract_name, vendor, contract_type, start_date, end_date, contract_value, status, renewal_date, contact_person, contact_email, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING *`,
+      [contract_name, vendor, contract_type, start_date, end_date, contract_value || 0, status || 'Active', renewal_date, contact_person, contact_email, notes]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error creating contract:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update contract
+ */
+export async function updateContract(id, contractData) {
+  const fields = [];
+  const values = [];
+  let paramCount = 1;
+
+  for (const [key, value] of Object.entries(contractData)) {
+    if (value !== undefined && value !== null) {
+      fields.push(`${key} = $${paramCount}`);
+      values.push(value);
+      paramCount++;
+    }
+  }
+
+  if (fields.length === 0) {
+    throw new Error('No fields to update');
+  }
+
+  fields.push(`updated_at = $${paramCount}`);
+  values.push(new Date());
+  values.push(id);
+
+  try {
+    const query = `UPDATE contracts SET ${fields.join(', ')} WHERE id = $${paramCount + 1} RETURNING *`;
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error updating contract:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete contract
+ */
+export async function deleteContract(id) {
+  try {
+    const result = await pool.query('DELETE FROM contracts WHERE id = $1 RETURNING *', [id]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error deleting contract:', error);
+    throw error;
+  }
+}
+
+/**
+ * Search contracts
+ */
+export async function searchContracts(query) {
+  try {
+    const searchTerm = `%${query}%`;
+    const result = await pool.query(
+      `SELECT * FROM contracts 
+       WHERE contract_name ILIKE $1 
+          OR vendor ILIKE $1 
+          OR contact_person ILIKE $1 
+          OR contact_email ILIKE $1
+       ORDER BY created_at DESC`,
+      [searchTerm]
+    );
+    return result.rows;
+  } catch (error) {
+    console.error('Error searching contracts:', error);
     throw error;
   }
 }
