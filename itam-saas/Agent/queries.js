@@ -237,6 +237,26 @@ export async function createLicense(licenseData) {
     throw new Error('License type is required');
   }
   
+  // Format date to yyyy-MM-dd if provided
+  let formattedDate = null;
+  if (expiration_date) {
+    if (typeof expiration_date === 'string') {
+      if (expiration_date.includes('T')) {
+        // ISO format - extract date part
+        formattedDate = expiration_date.split('T')[0];
+      } else if (expiration_date.includes('/')) {
+        // dd/mm/yyyy format
+        const parts = expiration_date.split('/');
+        if (parts.length === 3) {
+          formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      } else {
+        // Assume already in correct format
+        formattedDate = expiration_date;
+      }
+    }
+  }
+  
   try {
     const result = await pool.query(
       `INSERT INTO licenses (license_name, license_type, license_key, software_name, vendor, expiration_date, quantity, status, cost, notes)
@@ -245,14 +265,14 @@ export async function createLicense(licenseData) {
       [
         license_name.trim(), 
         license_type.trim(), 
-        license_key || null, 
-        software_name || null, 
-        vendor || null, 
-        expiration_date || null, 
+        license_key?.trim() || null, 
+        software_name?.trim() || null, 
+        vendor?.trim() || null, 
+        formattedDate, 
         quantity || 1, 
         status || 'Active', 
         cost || 0, 
-        notes || null
+        notes?.trim() || null
       ]
     );
     return result.rows[0];
@@ -272,8 +292,27 @@ export async function updateLicense(id, licenseData) {
 
   for (const [key, value] of Object.entries(licenseData)) {
     if (value !== undefined && value !== null) {
+      let processedValue = value;
+      
+      // Format date fields
+      if (key === 'expiration_date' && typeof value === 'string') {
+        if (value.includes('T')) {
+          processedValue = value.split('T')[0];
+        } else if (value.includes('/')) {
+          const parts = value.split('/');
+          if (parts.length === 3) {
+            processedValue = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        }
+      }
+      
+      // Trim string values
+      if (typeof processedValue === 'string') {
+        processedValue = processedValue.trim();
+      }
+      
       fields.push(`${key} = $${paramCount}`);
-      values.push(value);
+      values.push(processedValue);
       paramCount++;
     }
   }

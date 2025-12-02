@@ -189,12 +189,29 @@ export default function App() {
 
     try {
       setLoading(true);
+      // Format expiration_date from ISO to yyyy-MM-dd
+      let formattedDate = licenseFormData.expiration_date;
+      if (formattedDate) {
+        // If it's an ISO date (contains T), extract just the date part
+        if (formattedDate.includes('T')) {
+          formattedDate = formattedDate.split('T')[0];
+        }
+        // If it's in dd/mm/yyyy format, convert to yyyy-MM-dd
+        else if (formattedDate.includes('/')) {
+          const parts = formattedDate.split('/');
+          if (parts.length === 3) {
+            formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        }
+      }
+      
       const dataToSend = {
         ...licenseFormData,
         license_name: licenseFormData.license_name.trim(),
         license_type: licenseFormData.license_type.trim(),
         software_name: licenseFormData.software_name?.trim() || null,
         vendor: licenseFormData.vendor?.trim() || null,
+        expiration_date: formattedDate || null,
         quantity: parseInt(licenseFormData.quantity) || 1,
         cost: parseFloat(licenseFormData.cost) || 0,
         notes: licenseFormData.notes?.trim() || null
