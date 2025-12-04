@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Package, Plus, Search, Trash2, Edit2, Menu, X, HardDrive, FileText, Users, FileCheck } from 'lucide-react';
 import * as dbService from './services/db';
 
@@ -14,6 +14,9 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  
+  // Prevent duplicate submissions
+  const isSubmittingRef = useRef(false);
   const [formData, setFormData] = useState({
     asset_tag: '',
     asset_type: '',
@@ -68,7 +71,9 @@ export default function App() {
       setLoading(true);
       setError(null);
       const data = await dbService.fetchAssets();
-      setAssets(data);
+      // Remove duplicates by ID
+      const uniqueAssets = Array.from(new Map(data.map(item => [item.id, item])).values());
+      setAssets(uniqueAssets);
     } catch (err) {
       console.error('Failed to load assets:', err);
       setError('Failed to load assets. Make sure the backend server is running on port 5000.');
@@ -80,7 +85,9 @@ export default function App() {
   const loadLicenses = async () => {
     try {
       const data = await dbService.fetchLicenses();
-      setLicenses(data);
+      // Remove duplicates by ID
+      const uniqueLicenses = Array.from(new Map(data.map(item => [item.id, item])).values());
+      setLicenses(uniqueLicenses);
     } catch (err) {
       console.error('Failed to load licenses:', err);
     }
@@ -89,7 +96,9 @@ export default function App() {
   const loadUsers = async () => {
     try {
       const data = await dbService.fetchUsers();
-      setUsers(data);
+      // Remove duplicates by ID
+      const uniqueUsers = Array.from(new Map(data.map(item => [item.id, item])).values());
+      setUsers(uniqueUsers);
     } catch (err) {
       console.error('Failed to load users:', err);
     }
@@ -98,19 +107,27 @@ export default function App() {
   const loadContracts = async () => {
     try {
       const data = await dbService.fetchContracts();
-      setContracts(data);
+      // Remove duplicates by ID
+      const uniqueContracts = Array.from(new Map(data.map(item => [item.id, item])).values());
+      setContracts(uniqueContracts);
     } catch (err) {
       console.error('Failed to load contracts:', err);
     }
   };
 
   const handleAddAsset = async () => {
+    if (isSubmittingRef.current) {
+      console.warn('Submission already in progress');
+      return;
+    }
+    
     if (!formData.asset_tag.trim()) {
       alert('Please enter an asset tag');
       return;
     }
 
     try {
+      isSubmittingRef.current = true;
       setLoading(true);
       if (editingId) {
         await dbService.updateAsset(editingId, formData);
@@ -132,6 +149,7 @@ export default function App() {
     } catch (err) {
       setError(`Failed to ${editingId ? 'update' : 'add'} asset: ${err.message}`);
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
   };
@@ -178,6 +196,11 @@ export default function App() {
 
   // License handlers
   const handleAddLicense = async () => {
+    if (isSubmittingRef.current) {
+      console.warn('Submission already in progress');
+      return;
+    }
+    
     if (!licenseFormData.license_name.trim()) {
       alert('Please enter a license name');
       return;
@@ -188,6 +211,7 @@ export default function App() {
     }
 
     try {
+      isSubmittingRef.current = true;
       setLoading(true);
       // Format expiration_date from ISO to yyyy-MM-dd
       let formattedDate = licenseFormData.expiration_date;
@@ -240,6 +264,7 @@ export default function App() {
     } catch (err) {
       setError(`Failed to ${editingId ? 'update' : 'add'} license: ${err.message}`);
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
   };
@@ -264,12 +289,18 @@ export default function App() {
 
   // User handlers
   const handleAddUser = async () => {
+    if (isSubmittingRef.current) {
+      console.warn('Submission already in progress');
+      return;
+    }
+    
     if (!userFormData.user_name.trim()) {
       alert('Please enter a user name');
       return;
     }
 
     try {
+      isSubmittingRef.current = true;
       setLoading(true);
       if (editingId) {
         await dbService.updateUser(editingId, userFormData);
@@ -291,6 +322,7 @@ export default function App() {
     } catch (err) {
       setError(`Failed to ${editingId ? 'update' : 'add'} user: ${err.message}`);
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
   };
@@ -315,12 +347,18 @@ export default function App() {
 
   // Contract handlers
   const handleAddContract = async () => {
+    if (isSubmittingRef.current) {
+      console.warn('Submission already in progress');
+      return;
+    }
+    
     if (!contractFormData.contract_name.trim()) {
       alert('Please enter a contract name');
       return;
     }
 
     try {
+      isSubmittingRef.current = true;
       setLoading(true);
       if (editingId) {
         await dbService.updateContract(editingId, contractFormData);
@@ -344,6 +382,7 @@ export default function App() {
     } catch (err) {
       setError(`Failed to ${editingId ? 'update' : 'add'} contract: ${err.message}`);
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
   };
